@@ -33,6 +33,27 @@ class AuthService {
     };
   }
 
+  async sendRecovery(email) {
+    const user = await service.findByEmail(email);
+    if (!user) {
+      throw boom.unauthorized();
+    }
+    const payload = { sub: user.id };
+    const token = jwt.sign(payload, config.jwtRecoverySecret, {
+      expiresIn: '15min',
+    });
+    const link = `https://myfrontend.com/recovery?token=${token}`;
+    await service.update(user.id, { recoveryToken: token });
+    const mail = {
+      from: `"Foo Boo 👻" <${config.mailerEmail}>`,
+      to: `${user.email}`,
+      subject: 'Email para recuperar contraseña',
+      html: `<b>Ingresa a este link para recuperar tu contraseña: ${link}</b>`,
+    };
+    const rta = await this.sendMail(mail);
+    return rta;
+  }
+
   async sendMail(email) {
     const user = await service.findByEmail(email);
     if (!user) {
